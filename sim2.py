@@ -163,13 +163,10 @@ class Car_ai(Car):
     def update(self):
         """Actualiste la position de la voiture, appelé a chaque Frame"""
         newPos = self.calc_newpos(self.rect,self.vector)
-
-        if self.obstacle_detected(newPos) and self.hit == 0:
-            self.turn_deg(60);
-            self.hit = 1
-        else:
-            self.hit = 0
-
+        if (self.getY() <= 30):
+            self.set_speed(0.5)
+        if (self.getY() <= 10):
+            self.set_speed(0)
         self.update_car(newPos)
 
 def main():

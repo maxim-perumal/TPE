@@ -10,7 +10,7 @@ from pygame.locals import *
 
 SCREEN_X = 1600
 SCREEN_Y = 900
-DIFF_ANGLE = 3.14/4
+DIFF_ANGLE = 3.14/3
 
 """Soit Rect la hitbox, et les sprite les elements de rendus."""
 
@@ -31,11 +31,13 @@ class Obstacle(pygame.sprite.Sprite):
     hérite de la class Sprite de Pygame.
     Return: sprite objet Obstacle (pour rendus)
     Method: update"""
+
     def __init__(self, color, width, height):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface([width, height])
         self.image.fill(color)
         self.rect = (random.randint(0,SCREEN_X), random.randint(0,SCREEN_Y) , width, height)
+
 
 
 class Car(pygame.sprite.Sprite):
@@ -56,7 +58,7 @@ class Car(pygame.sprite.Sprite):
     def update_car(self, newPos):
         """Actualisation de l'objet Car dans la simulation"""
         self.rect = newPos
-        print("    X: " + str(self.getX()) + "    Y: " + str(self.getY()) + "    Z: " + str(self.getZ()))
+        #print("    X: " + str(self.getX()) + "    Y: " + str(self.getY()) + "    Z: " + str(self.getZ()))
 
     def calc_newpos(self, rect, vector):
         """Calcul de la position en x,y d'après un vecteur de mouvement"""
@@ -66,10 +68,10 @@ class Car(pygame.sprite.Sprite):
 
     def obstacle_detected(self, newPos):
         if self.area.contains(newPos):
-            if self.rect.colliderect(Obstacle_list[0].rect):
-                return True
-            else:
-                return False
+            for obstacle in Obstacle_list:
+                if self.rect.colliderect(obstacle.rect):
+                    return True
+            return False
         else:
             return True
 
@@ -101,13 +103,17 @@ class Car(pygame.sprite.Sprite):
         Yvector = (angle,z)
         vectorIsMax = False
 
+        if (self.obstacle_detected(self.calc_newpos(self.rect, Yvector))):
+            vectorIsMax = True
+
         while (vectorIsMax == False):
 
             if (self.obstacle_detected(self.calc_newpos(self.rect, Yvector))):
                 vectorIsMax = True
+                break
 
             (angle,z) = Yvector
-            Yvector = (angle,z + 1)
+            Yvector = (angle,z + 0.1)
 
         return self.calc_vectorNorm(Yvector)
 
@@ -138,6 +144,10 @@ class Car(pygame.sprite.Sprite):
         angle = Xrad + angle
         self.vector = (angle,z)
 
+    def turn_rad(self, Xrad):
+        (angle,z) = self.vector
+        self.vector = (angle + Xrad,z)
+
     def change_speed(self, delta):
         (angle,z) = self.vector
         self.vector = (angle,z + delta)
@@ -159,17 +169,20 @@ class Car_ai(Car):
         self.hit = 0
         self.vector = (-1,speed)
         Car.__init__(self, self.vector)
+        newPos = self.calc_newpos(self.rect,(-3.14/4,50))
+        self.update_car(newPos)
 
     def update(self):
         """Actualiste la position de la voiture, appelé a chaque Frame"""
+        Y = self.getY()
+        if (Y <= 40):
+            if (Y == 0):
+                self.set_speed(0)
+            if (self.getX() > self.getZ()):
+                self.turn_rad( (-3.14) / Y )
+            else:
+                self.turn_rad( (3.14) / Y )
         newPos = self.calc_newpos(self.rect,self.vector)
-
-        if self.obstacle_detected(newPos) and self.hit == 0:
-            self.turn_deg(60);
-            self.hit = 1
-        else:
-            self.hit = 0
-
         self.update_car(newPos)
 
 def main():
@@ -186,13 +199,15 @@ def main():
     background.fill((255, 255, 255))
 
     #Initialisation de la voiture et de l'IA
-    car = Car_ai()
     global Obstacle_list
-    Obstacle_list = [Obstacle((0,0,0),20,100)]
+    Obstacle_list = [Obstacle((0,0,0),50,100), Obstacle((0,0,0),50,100), Obstacle((0,0,0),50,100)]
+    car = Car_ai()
 
     #Initialisation des Sprites
     carsprite = pygame.sprite.RenderPlain(car)
-    mursprite = pygame.sprite.RenderPlain(Obstacle_list[0])
+    wallsprite_list = []
+    for obstacle in Obstacle_list:
+        wallsprite_list.append(pygame.sprite.RenderPlain(obstacle))
 
     # Blitter pour rendus dans la fenêtre (création des rendus 2D dans fenetre)
     screen.blit(background, (0, 0))
@@ -212,10 +227,12 @@ def main():
         # Rendus des sprites
         screen.blit(background, car.rect, car.rect)
         carsprite.update()
-        screen.blit(background, Obstacle_list[0].rect, Obstacle_list[0].rect)
+        for obstacle in Obstacle_list:
+            screen.blit(background, obstacle.rect, obstacle.rect)
         carsprite.draw(screen)
-        mursprite.draw(screen)
+        for wall in wallsprite_list:
+            wall.draw(screen)
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(60)
 
 if __name__ == '__main__': main()
